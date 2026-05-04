@@ -62,9 +62,9 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('item', models.UUIDField(blank=True, null=True)),
-                ('name', models.CharField(max_length=200)),
+                ('item_name', models.CharField(max_length=200)),
                 ('pricing_type', models.CharField(max_length=10)),
-                ('price_per_unit', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('item_price', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('quantity_grams', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
                 ('quantity_pieces', models.PositiveIntegerField(blank=True, null=True)),
                 ('item_total', models.DecimalField(decimal_places=2, max_digits=12)),

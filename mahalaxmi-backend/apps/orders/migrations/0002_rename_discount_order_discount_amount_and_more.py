@@ -15,21 +15,6 @@ class Migration(migrations.Migration):
             old_name='discount',
             new_name='discount_amount',
         ),
-        migrations.RenameField(
-            model_name='orderitem',
-            old_name='item_id',
-            new_name='item',
-        ),
-        migrations.RenameField(
-            model_name='orderitem',
-            old_name='name',
-            new_name='item_name',
-        ),
-        migrations.RenameField(
-            model_name='orderitem',
-            old_name='price_per_unit',
-            new_name='item_price',
-        ),
         migrations.RemoveField(
             model_name='order',
             name='total',
