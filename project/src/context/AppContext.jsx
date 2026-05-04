@@ -124,13 +124,7 @@ export function AppProvider({ children }) {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         
-        // Items and Categories are public
-        const [itemsData, categoriesData] = await Promise.all([
-          menuApi.getItems().catch(() => []),
-          menuApi.getCategories().catch(() => [])
-        ]);
-
-        // Fetch all data from cloud
+        // Fetch all data from cloud in one go
         const [itemsData, categoriesData, ordersDataRaw, customersDataRaw] = await Promise.all([
           menuApi.getItems().catch(() => []),
           menuApi.getCategories().catch(() => []),
