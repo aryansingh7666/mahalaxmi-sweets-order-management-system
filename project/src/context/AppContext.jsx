@@ -135,10 +135,11 @@ export function AppProvider({ children }) {
         // If frontend is logged in (mhl_auth) but missing real JWT token, fetch one silently
         if (!token && sessionStorage.getItem('mhl_auth') === 'true') {
           try {
-            const authRes = await fetch('/api/auth/login/', {
+            const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+            const authRes = await fetch(`${API_BASE}/auth/login/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username: 'admin', password: 'admin123' })
+              body: JSON.stringify({ username: 'admin123', password: 'mahalaxmi123' })
             }).then(r => r.json());
             
             if (authRes?.data?.access) {
