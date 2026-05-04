@@ -40,6 +40,25 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
+        methods=['patch'],
+        permission_classes=[AllowAny],
+        url_path='kitchen',
+    )
+    def kitchen(self, request, pk=None):
+        order = self.get_object()
+        status_val = request.data.get('kitchen_status')
+        if not status_val:
+            return error_response("kitchen_status is required")
+        
+        order.kitchen_status = status_val
+        order.save()
+        return success_response(
+            data={"order_id": order.order_id, "kitchen_status": order.kitchen_status},
+            message=f"Status updated to {status_val}"
+        )
+
+    @action(
+        detail=True,
         methods=['get'],
         permission_classes=[AllowAny],
         url_path='generate_invoice',

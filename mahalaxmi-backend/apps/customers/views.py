@@ -50,11 +50,10 @@ def find_or_create_customer(request):
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    permission_classes = [IsAdminUser]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'phone', 'address']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'balance', 'orders']:
+            return [AllowAny()]
+        return [IsAdminUser()]
 
     def list(self, request, *args, **kwargs):
         qs = self.filter_queryset(self.get_queryset())
