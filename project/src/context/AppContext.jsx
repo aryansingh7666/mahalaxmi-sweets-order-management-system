@@ -119,13 +119,6 @@ export function AppProvider({ children }) {
   const initialized = useRef(false);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    if (categories === null) setCategories(SEED_CATEGORIES);
-    if (items === null) setItems(SEED_ITEMS);
-    if (coupons === null) setCoupons(SEED_COUPONS);
-    if (settings === null) setSettings(SEED_SETTINGS);
-
     // Sync with Backend
     const syncWithBackend = async () => {
       try {
@@ -152,7 +145,6 @@ export function AppProvider({ children }) {
           }
         }
         
-        // ... (rest of the normalization logic)
         const rawOrders = ordersData?.results || ordersData?.data || ordersData;
         const normalizedOrders = Array.isArray(rawOrders) ? rawOrders.map(normalizeOrder).filter(Boolean) : [];
         setOrders(normalizedOrders);
@@ -160,7 +152,14 @@ export function AppProvider({ children }) {
         const rawCustomers = customersData?.results || customersData?.data || customersData;
         const normalizedCustomers = Array.isArray(rawCustomers) ? rawCustomers.map(c => {
           if (!c) return null;
-          return { ...c, orderCount: c.total_orders || 0, totalSpent: parseFloat(c.total_spent || 0), balance: parseFloat(c.outstanding_balance || 0) };
+          return { 
+            ...c, 
+            orderCount: c.total_orders || 0, 
+            totalSpent: parseFloat(c.total_spent || 0), 
+            balance: parseFloat(c.outstanding_balance || 0),
+            name: c.name || 'Unknown',
+            phone: c.phone || '-'
+          };
         }).filter(Boolean) : [];
         setCustomers(normalizedCustomers);
 
@@ -169,8 +168,10 @@ export function AppProvider({ children }) {
           setItems(backendItems.map(item => ({
             ...item,
             id: item.id,
+            name: item.name,
             categoryId: item.category,
             price: parseFloat(item.price),
+            pricingType: item.pricing_type,
             active: item.is_active,
             image: item.image_url || ''
           })));
@@ -181,6 +182,8 @@ export function AppProvider({ children }) {
           setCategories(backendCategories.map(cat => ({
             ...cat,
             id: cat.id,
+            name: cat.name,
+            icon: cat.icon,
             active: cat.is_active
           })));
         }
@@ -189,8 +192,21 @@ export function AppProvider({ children }) {
       }
     };
 
+    if (!initialized.current) {
+        initialized.current = true;
+        if (categories === null) setCategories(SEED_CATEGORIES);
+        if (items === null) setItems(SEED_ITEMS);
+        if (coupons === null) setCoupons(SEED_COUPONS);
+        if (settings === null) setSettings(SEED_SETTINGS);
+    }
+
     syncWithBackend();
-  }, [setOrders, setCustomers, setItems, setCategories]);
+    
+    // Heartbeat every 20 seconds
+    const interval = setInterval(syncWithBackend, 20000);
+    return () => clearInterval(interval);
+
+  }, [setOrders, setCustomers, setItems, setCategories, setCoupons, setSettings]);
 
   const addCategory = useCallback((cat) => {
     setCategories(prev => [...prev, { ...cat, id: 'cat' + Date.now() }]);
@@ -223,19 +239,7 @@ export function AppProvider({ children }) {
   const addOrder = useCallback((order) => {
     const normalized = normalizeOrder(order);
     const orderWithKitchen = { ...normalized, kitchenStatus: normalized.kitchenStatus || 'NEW' };
-    setOrders(prev => {
-      const updated = [...prev, orderWithKitchen];
-      if (updated.length % 10 === 0) {
-        const data = {};
-        ['mhl_settings', 'mhl_categories', 'mhl_items', 'mhl_orders', 'mhl_customers', 'mhl_coupons'].forEach(key => {
-          const val = localStorage.getItem(key);
-          if (val) data[key] = val;
-        });
-        data.mhl_backup_timestamp = JSON.stringify(new Date().toISOString());
-        localStorage.setItem('mhl_backup_timestamp', data.mhl_backup_timestamp);
-      }
-      return updated;
-    });
+    setOrders(prev => [...prev, orderWithKitchen]);
 
     setCustomers(prev => {
       const customerObj = order.customer_data || order.customer;
@@ -251,7 +255,6 @@ export function AppProvider({ children }) {
         updated[existing] = {
           ...updated[existing],
           name: customerName,
-          address: order.delivery_address || updated[existing].address,
           orderCount: (updated[existing].orderCount || 0) + 1,
           totalSpent: (updated[existing].totalSpent || 0) + orderTotal,
           balance: (updated[existing].balance || 0) + orderBalance,
@@ -263,7 +266,6 @@ export function AppProvider({ children }) {
         id: order.customer?.id || 'cust' + Date.now(),
         name: customerName,
         phone: customerPhone,
-        address: order.delivery_address || '',
         orderCount: 1,
         totalSpent: orderTotal,
         balance: orderBalance,
@@ -273,36 +275,13 @@ export function AppProvider({ children }) {
   }, []);
 
   const updateOrder = useCallback((id, data) => {
-    let orderCustomer = null;
-    let balanceDiff = 0;
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, ...data } : o));
     
-    // 1. Optimistic UI Update
-    setOrders(prev => prev.map(o => {
-      if (o.id !== id) return o;
-      const updated = { ...o, ...data };
-      const oldBalance = o.balance || 0;
-      const newBalance = updated.balance !== undefined ? updated.balance : (updated.remaining_amount || 0);
-      if (oldBalance !== newBalance) {
-        orderCustomer = o.customer;
-        balanceDiff = newBalance - oldBalance;
-      }
-      return updated;
-    }));
-    
-    if (orderCustomer && balanceDiff !== 0) {
-      setCustomers(prevC => prevC.map(c =>
-        c.phone === orderCustomer.phone
-          ? { ...c, balance: Math.max(0, c.balance + balanceDiff) }
-          : c
-      ));
-    }
-    
-    // 2. Push to Backend
+    // Push to Backend
     const token = localStorage.getItem('token') || localStorage.getItem('access_token');
     if (token) {
       if (data.kitchenStatus || data.kitchen_status) {
         const status = data.kitchenStatus || data.kitchen_status;
-        // The backend expects 'PENDING' not 'NEW'
         const backendStatus = status === 'NEW' ? 'PENDING' : status;
         ordersApi.updateKitchenStatus(id, backendStatus).catch(console.error);
       } else {
@@ -310,7 +289,6 @@ export function AppProvider({ children }) {
         if (data.amount_paid !== undefined) apiData.amount_paid = data.amount_paid;
         if (data.remaining_amount !== undefined) apiData.remaining_amount = data.remaining_amount;
         if (data.payment_status) apiData.payment_status = data.payment_status;
-        
         if (Object.keys(apiData).length > 0) {
           ordersApi.updateOrder(id, apiData).catch(console.error);
         }
