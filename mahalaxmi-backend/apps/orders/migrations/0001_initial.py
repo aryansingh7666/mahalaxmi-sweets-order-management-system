@@ -60,8 +60,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='OrderItem',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('item_id', models.UUIDField()),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('item', models.UUIDField(blank=True, null=True)),
                 ('name', models.CharField(max_length=200)),
                 ('pricing_type', models.CharField(max_length=10)),
                 ('price_per_unit', models.DecimalField(decimal_places=2, max_digits=10)),
