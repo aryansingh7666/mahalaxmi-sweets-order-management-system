@@ -136,22 +136,26 @@ export function AppProvider({ children }) {
         const customersData = customersDataRaw;
         
         const rawOrders = ordersData?.results || ordersData?.data || ordersData;
-        const normalizedOrders = Array.isArray(rawOrders) ? rawOrders.map(normalizeOrder).filter(Boolean) : [];
-        setOrders(normalizedOrders);
+        if (Array.isArray(rawOrders)) {
+          const normalizedOrders = rawOrders.map(normalizeOrder).filter(Boolean);
+          setOrders(normalizedOrders);
+        }
         
         const rawCustomers = customersData?.results || customersData?.data || customersData;
-        const normalizedCustomers = Array.isArray(rawCustomers) ? rawCustomers.map(c => {
-          if (!c) return null;
-          return { 
-            ...c, 
-            orderCount: c.total_orders || 0, 
-            totalSpent: parseFloat(c.total_spent || 0), 
-            balance: parseFloat(c.outstanding_balance || 0),
-            name: c.name || 'Unknown',
-            phone: c.phone || '-'
-          };
-        }).filter(Boolean) : [];
-        setCustomers(normalizedCustomers);
+        if (Array.isArray(rawCustomers)) {
+          const normalizedCustomers = rawCustomers.map(c => {
+            if (!c) return null;
+            return { 
+              ...c, 
+              orderCount: c.total_orders || 0, 
+              totalSpent: parseFloat(c.total_spent || 0), 
+              balance: parseFloat(c.outstanding_balance || 0),
+              name: c.name || 'Unknown',
+              phone: c.phone || '-'
+            };
+          }).filter(Boolean);
+          setCustomers(normalizedCustomers);
+        }
 
         const backendItems = itemsData?.results || itemsData?.data || itemsData;
         if (Array.isArray(backendItems)) {
