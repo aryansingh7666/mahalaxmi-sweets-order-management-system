@@ -154,42 +154,27 @@ def generate_invoice_pdf(order):
     # Build PDF
     doc.build(elements)
     pdf_bytes = buffer.getvalue()
-    buffer.close()
-
-    # Save PDF locally first
-    import os
-    from django.conf import settings
-    invoice_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
-    os.makedirs(invoice_dir, exist_ok=True)
-    filename = f"order_{order.order_id}.pdf"
-    local_path = os.path.join(invoice_dir, filename)
-    with open(local_path, 'wb') as f:
-        f.write(pdf_bytes)
-    print(f"Saved locally: {local_path}")
-
-    # Verify local file is valid before uploading
-    file_size = os.path.getsize(local_path)
-    print(f"Local file size: {file_size} bytes")
-    if file_size < 100:
-        print("ERROR: PDF file too small, generation failed")
-        return pdf_bytes, None
-
-    # Upload to Cloudinary
+    
+    # Upload to Cloudinary DIRECTLY from memory
     pdf_url = None
     try:
-        with open(local_path, 'rb') as f:
-            upload_result = cloudinary.uploader.upload(
-                f,
-                resource_type = "raw",
-                public_id     = f"mahalaxmi/invoices/order_{order.order_id}.pdf",
-                overwrite     = True,
-                invalidate    = True
-            )
+        # Seek to beginning of buffer
+        buffer.seek(0)
+        
+        upload_result = cloudinary.uploader.upload(
+            buffer,
+            resource_type = "raw",
+            public_id     = f"mahalaxmi/invoices/order_{order.order_id}.pdf",
+            overwrite     = True,
+            invalidate    = True
+        )
         pdf_url = upload_result["secure_url"]
         print(f"Cloudinary success: {pdf_url}")
 
     except Exception as e:
         print(f"Cloudinary error: {e}")
         pdf_url = None
+    finally:
+        buffer.close()
 
     return pdf_bytes, pdf_url
