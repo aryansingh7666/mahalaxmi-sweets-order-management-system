@@ -1,0 +1,1 @@
+web: gunicorn mahalaxmi_backend.wsgi --log-file -

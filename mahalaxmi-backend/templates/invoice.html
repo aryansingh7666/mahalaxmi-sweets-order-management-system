@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        color: #111;
+    }
+    .header {
+        border-bottom: 2px solid #f97316;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+    }
+    .shop-name {
+        font-size: 24px;
+        color: #f97316;
+        font-weight: bold;
+    }
+    .section {
+        margin-bottom: 20px;
+    }
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    .table th, .table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    .table th {
+        background: #f97316;
+        color: white;
+    }
+    .total {
+        margin-top: 20px;
+        font-size: 16px;
+        line-height: 1.6;
+    }
+    .paid { color: green; font-weight: bold; }
+    .remaining { color: red; font-weight: bold; }
+
+    /* WATERMARK */
+    .watermark {
+        position: fixed;
+        top: 40%;
+        left: 20%;
+        font-size: 80px;
+        color: rgba(0,0,0,0.05);
+        transform: rotate(-20deg);
+        z-index: -1;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+
+<div class="watermark">Mahalaxmi</div>
+
+<div class="header">
+    <div class="shop-name">Mahalaxmi Sweets & Farsan</div>
+    <div>Taste the Tradition</div>
+</div>
+
+<div class="section">
+    <b>Order ID:</b> {{ order.order_id }}<br>
+    <b>Date:</b> {{ order.created_at|date:"d M Y H:i" }}
+</div>
+
+<div class="section">
+    <b>Customer:</b><br>
+    {{ order.customer.name }}<br>
+    {{ order.customer.phone }}<br>
+    {% if order.delivery_address %}{{ order.delivery_address }}{% endif %}
+</div>
+
+<div class="section">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.item_name }}</td>
+                <td>
+                    {% if item.pricing_type == "kg" %}
+                        {{ item.quantity_grams }}g
+                    {% else %}
+                        {{ item.quantity_pieces }} pc
+                    {% endif %}
+                </td>
+                <td>Rs. {{ item.item_price }}</td>
+                <td>Rs. {{ item.item_total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="total">
+    <b>Summary:</b><br>
+    Total Amount: Rs. {{ order.total_amount }}<br>
+    <span class="paid">Amount Paid: Rs. {{ order.amount_paid }}</span><br>
+    <span class="remaining">Balance Due: Rs. {{ order.remaining_amount }}</span>
+</div>
+
+</body>
+</html>
