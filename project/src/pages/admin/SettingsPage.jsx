@@ -63,7 +63,8 @@ export default function SettingsPage() {
       setUploading(true);
       const token = localStorage.getItem('token') || localStorage.getItem('access_token');
       
-      const response = await fetch('http://localhost:8000/api/settings/upload-logo/', {
+      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+      const response = await fetch(`${API_BASE}/settings/upload-logo/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

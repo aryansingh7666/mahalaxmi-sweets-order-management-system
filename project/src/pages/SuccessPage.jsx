@@ -104,8 +104,9 @@ export default function SuccessPage() {
     try {
       setLoadingPDF(true);
       
+      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
       const response = await fetch(
-        `http://localhost:8000/api/orders/${order.id}/generate_invoice/`,
+        `${API_BASE}/orders/${order.id}/generate_invoice/`,
         {
           method: 'GET',
           headers: {
