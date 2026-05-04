@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+const API_BASE = "https://mahalaxmi-sweets-order-management-system.onrender.com/api"
 
 export const apiRequest = async (
   endpoint,
