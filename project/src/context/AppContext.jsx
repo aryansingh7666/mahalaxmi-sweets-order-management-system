@@ -129,38 +129,18 @@ export function AppProvider({ children }) {
     // Sync with Backend
     const syncWithBackend = async () => {
       try {
-        let token = localStorage.getItem('token') || localStorage.getItem('access_token');
+        const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         
-        // --- AUTO-HEAL SESSION ---
-        // If frontend is logged in (mhl_auth) but missing real JWT token, fetch one silently
-        if (!token && sessionStorage.getItem('mhl_auth') === 'true') {
-          try {
-            const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-            const authRes = await fetch(`${API_BASE}/auth/login/`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username: 'admin123', password: 'mahalaxmi123' })
-            }).then(r => r.json());
-            
-            if (authRes?.data?.access) {
-              token = authRes.data.access;
-              localStorage.setItem('token', token);
-              localStorage.setItem('refresh_token', authRes.data.refresh);
-            }
-          } catch (e) {
-            console.warn("Silent auth heal failed", e);
-          }
-        }
-        
-        // Items and Categories are public, Orders and Customers require auth
+        // Items and Categories are public
         const [itemsData, categoriesData] = await Promise.all([
-          menuApi.getItems().catch(e => { console.warn('Public sync warn:', e); return []; }),
-          menuApi.getCategories().catch(e => { console.warn('Public sync warn:', e); return []; })
+          menuApi.getItems().catch(() => []),
+          menuApi.getCategories().catch(() => [])
         ]);
 
         let ordersData = [];
         let customersData = [];
 
+        // ONLY fetch orders if we have a token
         if (token) {
           try {
             [ordersData, customersData] = await Promise.all([
@@ -168,73 +148,49 @@ export function AppProvider({ children }) {
               customersApi.getCustomers()
             ]);
           } catch (e) {
-            console.warn('Protected sync skipped or failed:', e);
+            console.warn('Protected sync failed:', e);
           }
         }
         
-        // Normalize Orders - OMNI COMPATIBLE
+        // ... (rest of the normalization logic)
         const rawOrders = ordersData?.results || ordersData?.data || ordersData;
         const normalizedOrders = Array.isArray(rawOrders) ? rawOrders.map(normalizeOrder).filter(Boolean) : [];
-
-        // Normalize Customers
+        setOrders(normalizedOrders);
+        
         const rawCustomers = customersData?.results || customersData?.data || customersData;
         const normalizedCustomers = Array.isArray(rawCustomers) ? rawCustomers.map(c => {
           if (!c) return null;
-          const totalSpent = parseFloat(c.total_spent || c.totalSpent || 0);
-          const balance = parseFloat(c.outstanding_balance || c.balance || 0);
-          const orderCount = parseInt(c.total_orders || c.order_count || c.orderCount || 0, 10);
-          return {
-            ...c,
-            // Both variants
-            order_count: orderCount,
-            orderCount: orderCount,
-            total_spent: totalSpent,
-            totalSpent: totalSpent,
-            balance: balance,
-            outstanding_balance: balance,
-            last_order_date: c.last_order_date || c.lastOrderDate,
-            lastOrderDate: c.last_order_date || c.lastOrderDate
-          };
+          return { ...c, orderCount: c.total_orders || 0, totalSpent: parseFloat(c.total_spent || 0), balance: parseFloat(c.outstanding_balance || 0) };
         }).filter(Boolean) : [];
+        setCustomers(normalizedCustomers);
 
         const backendItems = itemsData?.results || itemsData?.data || itemsData;
+        if (Array.isArray(backendItems)) {
+          setItems(backendItems.map(item => ({
+            ...item,
+            id: item.id,
+            categoryId: item.category,
+            price: parseFloat(item.price),
+            active: item.is_active,
+            image: item.image_url || ''
+          })));
+        }
+
         const backendCategories = categoriesData?.results || categoriesData?.data || categoriesData;
-
-        // Normalize Items
-        const normalizedItems = Array.isArray(backendItems) ? backendItems.map(item => ({
-          ...item,
-          id: item.id,
-          name: item.name,
-          description: item.description || '',
-          categoryId: item.category,
-          price: parseFloat(item.price),
-          pricingType: item.pricing_type,
-          active: item.is_active,
-          image: item.image_url || item.image || '',
-          isBestseller: item.is_bestseller
-        })) : SEED_ITEMS;
-
-        // Normalize Categories
-        const normalizedCategories = Array.isArray(backendCategories) ? backendCategories.map(cat => ({
-          ...cat,
-          id: cat.id,
-          name: cat.name,
-          icon: cat.icon,
-          color: cat.color,
-          active: cat.is_active
-        })) : SEED_CATEGORIES;
-
-        setOrders(normalizedOrders);
-        setCustomers(normalizedCustomers);
-        setItems(normalizedItems);
-        setCategories(normalizedCategories);
+        if (Array.isArray(backendCategories)) {
+          setCategories(backendCategories.map(cat => ({
+            ...cat,
+            id: cat.id,
+            active: cat.is_active
+          })));
+        }
       } catch (error) {
-        console.error('Critical sync error:', error);
+        console.error('Sync error:', error);
       }
     };
 
     syncWithBackend();
-  }, [categories, items, coupons, settings, setCategories, setItems, setCoupons, setSettings]);
+  }, [setOrders, setCustomers, setItems, setCategories]);
 
   const addCategory = useCallback((cat) => {
     setCategories(prev => [...prev, { ...cat, id: 'cat' + Date.now() }]);
