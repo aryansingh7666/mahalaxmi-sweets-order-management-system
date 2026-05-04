@@ -130,20 +130,16 @@ export function AppProvider({ children }) {
           menuApi.getCategories().catch(() => [])
         ]);
 
-        let ordersData = [];
-        let customersData = [];
+        // Fetch all data from cloud
+        const [itemsData, categoriesData, ordersDataRaw, customersDataRaw] = await Promise.all([
+          menuApi.getItems().catch(() => []),
+          menuApi.getCategories().catch(() => []),
+          ordersApi.getOrders().catch(() => []),
+          customersApi.getCustomers().catch(() => [])
+        ]);
 
-        // ONLY fetch orders if we have a token
-        if (token) {
-          try {
-            [ordersData, customersData] = await Promise.all([
-              ordersApi.getOrders(),
-              customersApi.getCustomers()
-            ]);
-          } catch (e) {
-            console.warn('Protected sync failed:', e);
-          }
-        }
+        const ordersData = ordersDataRaw;
+        const customersData = customersDataRaw;
         
         const rawOrders = ordersData?.results || ordersData?.data || ordersData;
         const normalizedOrders = Array.isArray(rawOrders) ? rawOrders.map(normalizeOrder).filter(Boolean) : [];
